@@ -132,7 +132,7 @@ for file in data_file:
 
                 if token_tag_pair[j].startswith("<EOS>"):
                     partial_id = id + "-full"
-                    cum_intent = '#'.join(intent_triggers[j - 2])
+                    cum_intent = '#'.join(intent_triggers[j - 1])
 
                 writable = '\n'.join([partial_id] + token_tag_pair[:j+1] + [cum_intent])
                 data_points.append(writable)
