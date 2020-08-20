@@ -14,27 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+"""
+This script will in-turn process the raw data from four different sources, namely ATIS, Facebook TOP, Facebook Multilingual (EN), and SNIPS and generate the same incrementalized data format for all of them.
+The output format is:
+
+    type-sent_id-sub_id
+    token1 tag1
+    token2 tag2
+    token3 tag3
+    ...
+    intent
+
+where type is either train, dev, or test. An example for the identifier is `train-00001-1`. For each sent_id with n tokens in this sentence, there will be n entries, starting from sent_id-1 to sent_id-n.
+"""
+
 
 import os
 import sys
+import pathlib
 from collections import Counter, defaultdict
 import json
 import numpy as np
 import pandas as pd
 
-cwd = os.getcwd()
-sys.path.append(os.path.join(cwd, "preprocessing"))
-sys.path.append(os.path.join(cwd, 'preprocessing/raw_data/top-dataset-semantic-parsing'))
+project_root = pathlib.Path(__file__).parents[1]
+sys.path.append(os.path.join(project_root, "preprocessing"))
+sys.path.append(os.path.join(project_root, 'preprocessing/raw_data/top-dataset-semantic-parsing'))
 
 from tree import Tree, Intent, Slot
 
-raw_data_dir = os.path.join(cwd, 'preprocessing/raw_data')
+raw_data_dir = os.path.join(project_root, 'preprocessing/raw_data')
 data_file = ['train', 'test', 'dev']
 
 
 # preprocess ATIS data
 atis_dir = 'atis_resplit'
-atis_out = os.path.join(cwd, 'data/atis')
+atis_out = os.path.join(project_root, 'data/atis')
 intent_vocab = defaultdict(set)
 slot_vocab = defaultdict(set)
 
@@ -51,6 +66,8 @@ for file in data_file:
         intent_vocab[file].update(set(intents))
         slot_vocab[file].update(set(np.unique(tag_list[i])))
 
+        # adding <BOS>/<EOS> tags to indicating which data entries are prefixes only and which ones are full queries
+        # full queries will have an <EOS> tag as its last token, its sub_id will also be `full`
         id = atis_df.id[i]
         token_list[i][0] = "<BOS>"
         token_list[i][-1] = "<EOS>"
@@ -70,7 +87,7 @@ for file in data_file:
 
 # preprocess FB TOP semantic parsing data
 top_dir = 'top-dataset-semantic-parsing'
-top_out = os.path.join(cwd, 'data/top')
+top_out = os.path.join(project_root, 'data/top')
 
 intent_vocab = defaultdict(set)
 slot_vocab = defaultdict(set)
@@ -143,7 +160,7 @@ for file in data_file:
 
 # preprocess FB multilingual semantic parsing data
 fbml_dir = "multilingual_task_oriented_dialog_slotfilling"
-fbml_out = os.path.join(cwd, "data/fbml")
+fbml_out = os.path.join(project_root, "data/fbml")
 intent_vocab = defaultdict(set)
 slot_vocab = defaultdict(set)
 
@@ -209,17 +226,17 @@ for file in data_file:
 
 # preprocess SNIPS benchmark data
 snips_dir = "nlu-benchmark/2017-06-custom-intent-engines"
-snips_out = os.path.join(cwd, "data/snips")
+snips_out = os.path.join(project_root, "data/snips")
 intent_vocab = defaultdict(set)
 slot_vocab = defaultdict(set)
 
-domains = os.listdir(os.path.join(cwd, raw_data_dir, snips_dir))
+domains = os.listdir(os.path.join(project_root, raw_data_dir, snips_dir))
 snips_data = defaultdict(list)
 
 for intent in domains:
     if not intent.endswith('.md'):
-        train_data = json.load(open(os.path.join(cwd, raw_data_dir, snips_dir, f"{intent}/train_{intent}_full.json"), 'rb'))
-        dev_data = json.load(open(os.path.join(cwd, raw_data_dir, snips_dir, f"{intent}/validate_{intent}.json"), 'rb'))
+        train_data = json.load(open(os.path.join(raw_data_dir, snips_dir, f"{intent}/train_{intent}_full.json"), 'rb'))
+        dev_data = json.load(open(os.path.join(raw_data_dir, snips_dir, f"{intent}/validate_{intent}.json"), 'rb'))
         intent_vocab["train"].add(intent)
 
         count = len(train_data[intent])
